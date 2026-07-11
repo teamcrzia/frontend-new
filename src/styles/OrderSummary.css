@@ -1,0 +1,342 @@
+/* Order Summary Page - Override auth-page constraints */
+.order-summary-wrapper {
+  height: auto !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+  display: block !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+  overflow: visible !important;
+  justify-content: unset !important;
+  align-items: unset !important;
+  position: relative !important;
+}
+
+/* Order Summary Page */
+.order-summary-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px 60px 20px;
+  background: #ffffff;
+  display: block;
+}
+
+/* Header */
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.order-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.back-btn {
+  background: linear-gradient(135deg, #ffffff, #f0f5ff);
+  border: 2px solid #0055cc;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0055cc;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 85, 204, 0.1);
+}
+
+.back-btn:hover {
+  background: linear-gradient(135deg, #f0f5ff, #ffffff);
+  border-color: #003d99;
+  color: #003d99;
+  transform: translateX(-4px);
+  box-shadow: 0 6px 20px rgba(0, 85, 204, 0.2);
+}
+
+.back-btn:active {
+  transform: translateX(-2px);
+}
+
+/* Content Layout */
+.order-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+}
+
+/* Sections */
+.order-section {
+  background: #ffffff;
+  border: 2px solid #e5e5e5;
+  border-radius: 15px;
+  padding: 30px;
+  transition: all 0.3s ease;
+}
+
+.order-section:hover {
+  border-color: #0055cc;
+  box-shadow: 0 4px 15px rgba(0, 85, 204, 0.1);
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 20px 0;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #0055cc;
+}
+
+/* Plan Card Summary */
+.plan-card-summary {
+  background: #f0f5ff;
+  border: 2px solid #0055cc;
+  border-radius: 12px;
+  padding: 25px;
+  margin-top: 15px;
+}
+
+/* Coupon Section */
+.coupon-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.coupon-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e5e5;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s ease;
+  background: #ffffff;
+}
+
+.coupon-input:focus {
+  border-color: #0055cc;
+  box-shadow: 0 0 0 4px rgba(0, 85, 204, 0.1);
+}
+
+.apply-btn {
+  padding: 12px 24px;
+  background: #f0f5ff;
+  border: 2px solid #0055cc;
+  border-radius: 10px;
+  color: #0055cc;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.apply-btn:hover {
+  background: #0055cc;
+  color: #ffffff;
+}
+
+.plan-name-summary {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 10px 0;
+}
+
+.plan-desc-summary {
+  font-size: 1rem;
+  color: #000000;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.plan-header-info {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.price-summary {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #000000;
+}
+
+.duration-summary {
+  font-size: 0.9rem;
+  color: #000000;
+}
+
+/* Features Summary */
+.features-summary h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 15px 0;
+}
+
+.features-summary ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.features-summary li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: #333333;
+}
+
+.feature-check {
+  color: #3b82f6;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+/* Order Details / Summary Table */
+.summary-table {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.summary-row.summary-divider {
+  border-bottom: 2px solid #3b82f6;
+  margin-bottom: 10px;
+  padding-top: 20px;
+}
+
+.summary-row.summary-total {
+  background: #f0f5ff;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #0055cc;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.summary-label {
+  font-size: 0.95rem;
+  color: #000000;
+  font-weight: 600;
+}
+
+.summary-value {
+  font-size: 1rem;
+  color: #000000;
+  font-weight: 600;
+}
+
+.summary-row.summary-total .summary-value {
+  color: #000000;
+  font-size: 1.3rem;
+}
+
+.total-price {
+  font-size: 1.5rem !important;
+}
+
+/* Proceed Section */
+.proceed-section {
+  margin-top: 40px;
+  text-align: center;
+}
+
+/* Proceed Button */
+.proceed-btn {
+  width: 100%;
+  padding: 18px 30px;
+  background: linear-gradient(135deg, #0055cc, #003d99);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.proceed-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 85, 204, 0.35);
+}
+
+.proceed-btn:active {
+  transform: translateY(-1px);
+}
+
+/* Payment Info */
+.payment-info {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #000000;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid #e5e5e5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .order-summary-container {
+    padding: 20px 15px 40px 15px;
+  }
+
+  .order-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .order-title {
+    text-align: left;
+    font-size: 1.8rem;
+  }
+
+  .back-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .order-section {
+    padding: 20px;
+  }
+
+  .plan-card-summary {
+    padding: 20px;
+  }
+
+  .payment-methods {
+    grid-template-columns: 1fr;
+  }
+
+  .price-summary {
+    font-size: 2rem;
+  }
+
+  .summary-row {
+    padding: 12px 0;
+  }
+}

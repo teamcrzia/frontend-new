@@ -1,0 +1,19 @@
+/* Reset default spacing */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Root container */
+#root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Prevent horizontal scroll */
+body {
+  overflow-x: hidden;
+}

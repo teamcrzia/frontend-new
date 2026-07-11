@@ -1,0 +1,407 @@
+/* GLOBAL RESET FOR ONBOARDING */
+.onboard-container {
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-color-dark, #0f172a);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  color: var(--text-dark, #f8fafc);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Background Glowing Orbs */
+.onboard-container::before,
+.onboard-container::after {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: 0;
+  opacity: 0.15;
+}
+
+.onboard-container::before {
+  top: -150px;
+  right: -100px;
+  background: var(--accent-color, #3b82f6);
+}
+
+.onboard-container::after {
+  bottom: -150px;
+  left: -100px;
+  background: #10b981; /* teal/emerald glow for progress */
+}
+
+/* Onboard Card */
+.onboard-card {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(20px);
+  padding: 40px;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 10;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Progress */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: var(--accent-color, #3b82f6);
+  border-radius: 10px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 10px var(--accent-color, #3b82f6);
+}
+
+.onboard-card h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #ffffff;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Inputs */
+.onboard-card input {
+  width: 100%;
+  padding: 16px;
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border-dark, #1e293b);
+  background: rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.onboard-card input:focus {
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+/* Buttons */
+.onboard-card button {
+  margin-top: auto;
+  padding: 14px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-color, #3b82f6), #60a5fa);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.onboard-card button:hover:not(:disabled) {
+  background: var(--accent-hover, #2563eb);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.onboard-card button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.onboard-card button:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Option Cards (Buttons) */
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.option {
+  padding: 16px;
+  border: 1px solid var(--border-dark, #1e293b);
+  background: rgba(255, 255, 255, 0.03);
+  color: #cbd5e1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  margin: 0 !important; /* override global button margin */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+}
+
+.option.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
+/* --- DOB Picker --- */
+.dob-subtitle {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+  margin-top: -8px;
+}
+
+.dob-picker {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.dob-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dob-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.dob-select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-dark, #1e293b);
+  background: #5093ff !important;
+  color: #ffffff;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 16px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dob-select:hover {
+  border-color: var(--accent-color, #3b82f6);
+  background: #3b83f6aa !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+}
+
+.dob-select:focus {
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+
+.dob-select option {
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px;
+}
+
+.dob-preview {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Error text */
+.error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* Done step */
+.done-btn {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.done-btn:hover {
+  background: #2563eb !important;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4) !important;
+}
+
+/* ==========================================================================
+   🎨 ONBOARDING STEP WIZARD (LIGHT MODE OVERRIDES)
+   ========================================================================== */
+
+/* 1. Full Page Background Override */
+[data-theme="light"] .onboard-container {
+  background-color: #f0f5f6 !important;
+  color: #111827 !important;
+}
+
+/* Hide or fade glowing background blobs in light mode so text remains readable */
+[data-theme="light"] .onboard-container::before,
+[data-theme="light"] .onboard-container::after {
+  opacity: 0.04 !important;
+}
+
+/* 2. Onboarding Center Card */
+[data-theme="light"] .onboard-card {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+  color: #111827 !important;
+}
+
+/* 3. Typography (Headers, Subtitles, Errors) */
+[data-theme="light"] .onboard-card h2 {
+  color: #111827 !important;
+}
+
+[data-theme="light"] .onboard-card p,
+[data-theme="light"] .progress-text {
+  color: #4b5563 !important;
+}
+
+[data-theme="light"] .onboard-card .error {
+  color: #ef4444 !important;
+}
+
+/* 4. Text Inputs, Date Selectors & Dropdowns */
+[data-theme="light"] .onboard-card input[type="text"],
+[data-theme="light"] .dob-selectors select {
+  background: #f9fafb !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
+}
+
+[data-theme="light"] .onboard-card input[type="text"]:focus,
+[data-theme="light"] .dob-selectors select:focus {
+  background: #ffffff !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+}
+
+[data-theme="light"] .onboard-card input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* 5. Selectable Option Cards (Role & Struggle grids) */
+[data-theme="light"] .option-grid .option {
+  background: #f3f4f6 !important;
+  border: 1px solid #e5e7eb !important;
+  color: #374151 !important;
+}
+
+[data-theme="light"] .option-grid .option:hover {
+  background: #e5e7eb !important;
+}
+
+/* Maintain active option styles cleanly in light mode */
+[data-theme="light"] .option-grid .option.active {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+}
+
+/* 6. Navigation Progress Bar Grounding Track */
+[data-theme="light"] .progress-bar {
+  background: #e5e7eb !important;
+}
+
+/* ==========================================================================
+   🎯 CLEAN ARROW POSITION AND BLUE HOVER ACTION
+   ========================================================================== */
+/* Ensure the card has absolute layout alignment context */
+.onboard-card {
+  position: relative !important;
+}
+
+/* 🎯 Completely transparent naked arrow icon pinned to the top left */
+.minimal-back-arrow {
+  position: absolute !important;
+  top: 10px !important;
+  left: -200px !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #64748b !important; /* Clean dark slate gray base */
+  font-size: 26px !important;
+  font-weight: normal !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+  transition: color 0.2s ease, transform 0.2s ease !important;
+}
+
+/* 💙 Pure blue hover accent activation */
+.minimal-back-arrow:hover {
+  color: #3b82f6 !important; /* Electric blue hover matching your screenshot */
+  transform: translateX(-2px) !important; /* Subtle interactive pull effect */
+  background: transparent !important;
+}
+
+/* Light Mode alternative theme balancing */
+[data-theme="light"] .minimal-back-arrow {
+  color: #4590f9 !important;
+}
+[data-theme="light"] .minimal-back-arrow:hover {
+  color: #2563eb !important;
+}
