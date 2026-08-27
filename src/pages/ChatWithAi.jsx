@@ -8,15 +8,17 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   MessageSquare, Plus, Menu, Sun, Moon, Send,
   User, Zap, Settings, PanelLeftClose, BookOpen,
   PenTool, Code, Briefcase, Heart, Copy, ThumbsUp, ThumbsDown, Check, LogOut, LogIn,
-  Sparkles, X, MoreHorizontal, MoreVertical, Share2, Trash2, Pencil, Crown,
+  Sparkles, X, MoreHorizontal, MoreVertical, Share2, Trash2, Pencil, Crown, Pin, PinOff,
   File, Camera, Monitor, Image, Search,
   Mail, UtensilsCrossed, Atom, CalendarDays, Globe, FlaskConical,
   HelpCircle, Lightbulb, Terminal, Bug,
-  ClipboardList, Star, TrendingUp, Frown, Wind, Flower2
+  ClipboardList, Star, TrendingUp, Frown, Wind, Flower2, Lock, VenetianMask, RefreshCw
 } from "lucide-react";
 
 const Instagram = ({ size = 24, ...props }) => (
@@ -90,6 +92,66 @@ const CreateVideoIcon = ({ size = 18 }) => (
   </svg>
 );
 
+// 🔥 Custom renderer passed to ReactMarkdown as the `code` component.
+// Inline code (single backticks, e.g. `variable_name`) renders as a small
+// plain pill. Fenced code blocks (triple backticks, optionally with a
+// language like ```python) get the full treatment: a header bar showing
+// the detected language, a copy button that copies ONLY that block's code
+// (not the whole chat message), and real syntax highlighting.
+const CodeBlock = ({ inline, className, children, theme, ...props }) => {
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || "");
+  const language = match ? match[1] : "text";
+  const codeString = String(children).replace(/\n$/, "");
+
+  if (inline) {
+    return (
+      <code className="inline-code" {...props}>
+        {children}
+      </code>
+    );
+  }
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="code-block-wrapper">
+      <div className="code-block-header">
+        <span className="code-block-lang">{language}</span>
+        <button className="code-block-copy-btn" onClick={handleCopyCode}>
+          {copied ? (
+            <>
+              <Check size={14} /> Copied
+            </>
+          ) : (
+            <>
+              <Copy size={14} /> Copy
+            </>
+          )}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={language}
+        style={theme === "light" ? oneLight : vscDarkPlus}
+        customStyle={{
+          margin: 0,
+          borderRadius: "0 0 12px 12px",
+          padding: "16px",
+          fontSize: "0.85rem",
+          background: "transparent", // let .code-block-wrapper's themed background show through
+        }}
+        wrapLongLines
+      >
+        {codeString}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
 const initialModes = [
   { name: "General", icon: <Sparkles size={20} /> },
   { name: "Study", icon: <BookOpen size={20} /> },
@@ -98,6 +160,35 @@ const initialModes = [
   { name: "Career", icon: <Briefcase size={20} /> },
   { name: "Emotion", icon: <Heart size={20} /> },
 ];
+
+// 🆕 The backend saves/returns its own internal mode names (lowercase,
+// and a few — "overthinking", "medical" — that aren't even selectable
+// tabs, since they're auto-detected rather than chosen). This maps them
+// to a friendly label for the small mode tag shown under each reply.
+const MODE_DISPLAY_LABELS = {
+  general: "General",
+  study: "Study",
+  content: "Content",
+  code: "Code",
+  career: "Career",
+  emotional: "Emotion",
+  overthinking: "Overthinking",
+  medical: "Medical",
+  image: "Image",
+};
+
+// 🆕 Subset of the above that actually correspond to a clickable tab —
+// used to restore the selected tab when reopening a chat. Auto-detected
+// modes like "overthinking"/"medical" have no tab of their own, so a
+// chat that landed there falls back to "General" instead.
+const BACKEND_MODE_TO_TAB = {
+  general: "General",
+  study: "Study",
+  content: "Content",
+  code: "Code",
+  career: "Career",
+  emotional: "Emotion",
+};
 
 // Shown once a response is taking a while — cycles so waiting doesn't
 // feel dead. Kept light/playful since this is generic wait-time filler,
@@ -177,6 +268,42 @@ const pickRandom = (arr, n) => {
   return shuffled.slice(0, n);
 };
 
+// 🆕 The backend's image-generation URL is a LIVE endpoint — it generates
+// a brand-new image on every fetch rather than serving a stored file.
+// Ideally we'd fetch the bytes once and cache them client-side so
+// revisiting a message never re-triggers generation — but that requires
+// reading the response body via fetch(), which this worker blocks (no
+// CORS headers), so a fetch attempt fails outright (and, worse, still
+// reaches the server and burns a real generation before failing). A
+// plain <img> tag isn't subject to that restriction, so this renders one
+// directly. Whether revisiting the same image re-generates it now comes
+// down entirely to whatever HTTP caching (if any) the backend's image
+// endpoint sends — that's server-side behavior this component can't
+// influence without a same-origin proxy.
+function GeneratedImage({ src, alt, className, onClick }) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src) return null;
+
+  if (failed) {
+    return <div className="generated-image-error">Couldn't load this image.</div>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onClick={() => onClick && onClick(src)}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -205,7 +332,24 @@ export default function App() {
   const inputRef = useRef(null);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // 🆕 Guests (no Firebase user) can chat in General mode only, and
+  // nothing gets saved for them. Every other mode tab and every "extra"
+  // input feature (image/video creation, deep research, attachments)
+  // stays gated behind login. This helper is the single choke point for
+  // that — anything guest-restricted calls it first and bails if it
+  // returns false, instead of duplicating the `!user` check everywhere.
+  const requireAuth = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return false;
+    }
+    return true;
+  };
   const [isTemporaryChat, setIsTemporaryChat] = useState(false);
+  // 🆕 Shown once, right when the user flips temporary/incognito chat ON —
+  // makes sure they know this session won't be saved before they start typing.
+  const [showIncognitoNotice, setShowIncognitoNotice] = useState(false);
   const [activeMenuIdx, setActiveMenuIdx] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -242,6 +386,10 @@ export default function App() {
   // only guards the *visible* message list from cross-chat corruption.
   const sessionCounterRef = useRef(0);
   const activeSessionIdRef = useRef(0);
+  // 🆕 Tracks the most recent non-General mode actually used in the CURRENT
+  // chat. General is just a hub you can pass through — it doesn't clear
+  // this. So Study -> General -> Emotion still counts as Study -> Emotion.
+  const lastModeUsedRef = useRef(null);
 
   // 🔥 Synchronous lock against double-sends. `isBotTyping` (React state)
   // can't guard this alone — setIsBotTyping(true) is batched/async, so a
@@ -474,6 +622,7 @@ export default function App() {
   };
 
   const handleDeepSearch = () => {
+    if (!requireAuth()) return;
     setDeepSearchMode((prev) => !prev);
     setAttachmentMenuOpen(false);
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -555,6 +704,7 @@ export default function App() {
           id: c.id,
           title: c.title,
           icon: <MessageSquare size={16} />,
+          pinned: !!c.pinned,
         }))
       );
     } catch (err) {
@@ -589,13 +739,39 @@ export default function App() {
       if (!res.ok) throw new Error("Failed to load conversation");
       const data = await res.json();
 
-      const loadedMessages = (data.data || []).flatMap((entry) => [
-        { role: "user", text: entry.message },
-        { role: "bot", text: entry.response },
-      ]);
+      const loadedMessages = (data.data || []).flatMap((entry) => {
+        const fallbackImageUrl = extractGeneratedImageUrl(entry.response);
+        const isImage = entry.type === "image" || !!entry.image_url || !!fallbackImageUrl;
+        return [
+          { role: "user", text: entry.message, messageId: entry._id },
+          isImage
+            ? {
+                role: "bot",
+                text: "",
+                imageUrl: entry.image_url || fallbackImageUrl,
+                mode: entry.mode,
+                messageId: entry._id,
+              }
+            : { role: "bot", text: entry.response, mode: entry.mode, messageId: entry._id },
+        ];
+      });
 
       setMessages(loadedMessages);
       setCurrentChatId(chatId);
+
+      // 🆕 Restore whichever mode this chat was last used in, instead of
+      // always resetting to General on reload/switch. Auto-detected modes
+      // that don't have a tab of their own (overthinking/medical) fall
+      // back to General rather than leaving no tab visually active.
+      const entries = data.data || [];
+      const lastEntry = entries[entries.length - 1];
+      const resolvedMode = (lastEntry && BACKEND_MODE_TO_TAB[lastEntry.mode]) || "General";
+      setSelectedMode(resolvedMode);
+      // Keep the mode-switch tracker in sync with this chat's real history,
+      // so switching modes from here on compares against what this chat
+      // actually used, not whatever the previous chat left behind.
+      lastModeUsedRef.current = resolvedMode === "General" ? null : resolvedMode;
+
       setSidebarOpen((prev) => (isMobileDevice ? false : prev));
     } catch (err) {
       console.error("Error loading conversation:", err);
@@ -625,6 +801,7 @@ export default function App() {
         if (id === currentChatId) {
           setMessages([]);
           setCurrentChatId(null);
+          lastModeUsedRef.current = selectedMode === "General" ? null : selectedMode;
         }
       } catch (err) {
         console.error("Error deleting chat:", err);
@@ -638,6 +815,34 @@ export default function App() {
       const shareUrl = `${window.location.origin}/chat/${id}`;
       setShareCopied(false);
       setShareModal({ url: shareUrl });
+    } else if (action === "Pin" || action === "Unpin") {
+      const nextPinned = action === "Pin";
+      // 🔥 Optimistic update so the sidebar reorders immediately instead
+      // of waiting on the round-trip — reverted below if the request fails.
+      setChatHistory((prev) =>
+        prev
+          .map((chat) => (chat.id === id ? { ...chat, pinned: nextPinned } : chat))
+          .sort((a, b) => (b.pinned === a.pinned ? 0 : b.pinned ? 1 : -1))
+      );
+
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/pin-chat/${id}`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pinned: nextPinned }),
+        });
+        if (!res.ok) throw new Error("Pin update failed");
+      } catch (err) {
+        console.error("Error updating pin status:", err);
+        // Revert the optimistic change on failure.
+        setChatHistory((prev) =>
+          prev.map((chat) => (chat.id === id ? { ...chat, pinned: !nextPinned } : chat))
+        );
+        alert("Couldn't update pin status. Please try again.");
+      }
     }
   };
 
@@ -692,12 +897,16 @@ export default function App() {
   };
 
   const handleCreateImage = () => {
+    if (!requireAuth()) return;
     setCreateMode(createMode === "image" ? null : "image");
     setInput("");
+    setAttachmentMenuOpen(false);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const handleCreateVideo = () => {
+    if (!requireAuth()) return;
+    setAttachmentMenuOpen(false);
     // If the user is premium, activate video creation mode instead of redirecting
     if (user?.premium) {
       setCreateMode(createMode === "video" ? null : "video");
@@ -738,16 +947,75 @@ export default function App() {
       return;
     }
 
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    // 🆕 GUEST PATH — no Firebase user. Restricted to plain-text General
+    // chat only: any other mode tab, image/video creation, deep research,
+    // or attachments falls back to the auth modal instead. Nothing here
+    // touches the backend's authenticated /chat route, so nothing gets
+    // saved — no chat_id, no sidebar entry, no usage-limit tracking.
+    if (!currentUser) {
+      if (
+        selectedMode !== "General" ||
+        attachments.length > 0 ||
+        createMode ||
+        deepSearchMode
+      ) {
+        setShowAuthModal(true);
+        isSendingRef.current = false;
+        return;
+      }
+
+      const guestMessage = textToSend.trim();
+      if (textToSend === input) setInput("");
+      isSendingRef.current = false;
+
+      setMessages((prev) => [...prev, { role: "user", text: guestMessage }]);
+      setIsBotTyping(true);
+
+      try {
+        // Recreate {message, response} pairs from local state so the AI
+        // has short-term context — this is the only "memory" a guest
+        // conversation has, since none of it is persisted server-side.
+        const recentHistory = [];
+        for (let i = 0; i < messages.length - 1; i += 2) {
+          if (messages[i]?.role === "user" && messages[i + 1]?.role === "bot") {
+            recentHistory.push({ message: messages[i].text, response: messages[i + 1].text });
+          }
+        }
+
+        const guestRes = await fetch("http://127.0.0.1:8000/guest-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: guestMessage,
+            history: recentHistory.slice(-5),
+          }),
+        });
+
+        const guestData = await guestRes.json();
+
+        if (!guestData.success) {
+          throw new Error(guestData.error || "Something went wrong generating a response.");
+        }
+
+        setMessages((prev) => [...prev, { role: "bot", text: guestData.data.response }]);
+      } catch (err) {
+        console.error(err);
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", text: "Sorry, something went wrong getting a response. Please try again." },
+        ]);
+      } finally {
+        setIsBotTyping(false);
+      }
+      return;
+    }
+
     let localSessionId;
 
     try {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
-
-      if (!currentUser) {
-        setShowAuthModal(true);
-        return;
-      }
 
       const token = await currentUser.getIdToken();
 
@@ -797,6 +1065,18 @@ export default function App() {
         finalText = `[Deep Research] ${finalText}`;
       }
 
+      // 🔥 Claim this send as the active session BEFORE pushing the
+      // message, so the message itself can be tagged with localId — that's
+      // how we retroactively attach the real backend messageId to it once
+      // the response arrives (needed for the edit feature to work on a
+      // message sent in this same session, without requiring a refresh).
+      // Anything that arrives later and finds activeSessionIdRef no longer
+      // matches this value knows the user has moved on (switched chats /
+      // started a new one) and should not touch the visible message list.
+      sessionCounterRef.current += 1;
+      localSessionId = sessionCounterRef.current;
+      activeSessionIdRef.current = localSessionId;
+
       setMessages((prev) => [
         ...prev,
         {
@@ -805,6 +1085,7 @@ export default function App() {
           attachments: [...attachments],
           createMode: createMode,
           deepSearch: deepSearchMode,
+          localId: localSessionId,
         },
       ]);
       setIsBotTyping(true);
@@ -816,14 +1097,6 @@ export default function App() {
       // in a *different* chat to go through while this one keeps generating
       // in the background — which is exactly the behavior we want.
       isSendingRef.current = false;
-
-      // 🔥 Claim this send as the active session. Anything that arrives
-      // later and finds activeSessionIdRef no longer matches this value
-      // knows the user has moved on (switched chats / started a new one)
-      // and should not touch the visible message list.
-      sessionCounterRef.current += 1;
-      localSessionId = sessionCounterRef.current;
-      activeSessionIdRef.current = localSessionId;
 
       if (textToSend === input) {
         setInput("");
@@ -847,7 +1120,16 @@ export default function App() {
       }
 
       setAttachments([]);
-      setCreateMode(null);
+      // 🔥 Deliberately NOT resetting createMode here anymore. It used to
+      // clear back to null after every send, which meant "Create image"
+      // only ever applied to a single message — any follow-up (e.g. "now
+      // make it blue") silently fell back to plain text mode, so the
+      // user had to re-click "Create image" before every single edit,
+      // and even then the backend had no memory of the prior image (see
+      // the image-mode branch in chat.py, which now stitches together
+      // the whole streak of image turns for exactly this reason).
+      // Image mode now stays active across turns until the user removes
+      // it themselves via the "x" on the create-mode tag.
       setDeepSearchMode(false);
 
       setTimeout(() => {
@@ -912,21 +1194,32 @@ export default function App() {
           setCurrentChatId(chatData.chat_id);
         }
 
-        if (chatData.data.type === "image") {
+        const fallbackImageUrl = extractGeneratedImageUrl(chatData.data.response);
+        const isImage = chatData.data.type === "image" || !!fallbackImageUrl;
+
+        if (isImage) {
           setMessages((prev) => [
-            ...prev,
+            ...prev.map((m) =>
+              m.localId === localSessionId ? { ...m, messageId: chatData.data.message_id } : m
+            ),
             {
               role: "bot",
               text: "",
-              imageUrl: chatData.data.image_url,
+              imageUrl: chatData.data.image_url || fallbackImageUrl,
+              mode: chatData.data.mode,
+              messageId: chatData.data.message_id,
             },
           ]);
         } else {
           setMessages((prev) => [
-            ...prev,
+            ...prev.map((m) =>
+              m.localId === localSessionId ? { ...m, messageId: chatData.data.message_id } : m
+            ),
             {
               role: "bot",
               text: chatData.data.response,
+              mode: chatData.data.mode,
+              messageId: chatData.data.message_id,
             },
           ]);
         }
@@ -941,7 +1234,12 @@ export default function App() {
           ...prev,
           {
             role: "bot",
-            text: "Sorry, something went wrong getting a response. Please try again.",
+            // 🔥 Show the real reason (e.g. "SmartAI took too long to
+            // respond") instead of a generic message — a timeout and a
+            // genuine server error need different reactions from the
+            // user (retry vs. report a bug), and the backend already
+            // sends a specific message in err.message.
+            text: err.message || "Sorry, something went wrong getting a response. Please try again.",
           },
         ]);
       }
@@ -969,11 +1267,231 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isBotTyping, longWait]);
+  // 🆕 EDIT MESSAGE — lets the user correct something they typed and
+  // regenerate the AI's reply based on the edited text, instead of the
+  // reply being stuck answering the original (wrong/incomplete) wording.
+  const [editingMessageIdx, setEditingMessageIdx] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
-  // After 4s of waiting, switch from the simple 3-dot indicator to the
+  const startEditingMessage = (idx) => {
+    setEditingMessageIdx(idx);
+    setEditingText(messages[idx].text);
+  };
+
+  const cancelEditingMessage = () => {
+    setEditingMessageIdx(null);
+    setEditingText("");
+  };
+
+  // 🆕 The backend isn't consistent about how it reports a generated
+  // image: /chat returns a clean { type: "image", image_url } shape, but
+  // /edit-message (used for regenerate) sometimes instead sends back a
+  // plain text reply like "[Generated image: <url>]". Left alone, that
+  // renders as ordinary markdown text — the URL becomes a clickable link
+  // that re-triggers generation on every open, instead of an actual
+  // inline image. This pulls the URL back out so it can be treated the
+  // same as a proper image response either way.
+  const extractGeneratedImageUrl = (text) => {
+    if (!text) return null;
+    const match = text.match(/\[\s*Generated image:\s*(\S+?)\s*\]\s*$/i);
+    return match ? match[1] : null;
+  };
+
+  const handleEditMessage = async (idx) => {
+    if (isSendingRef.current) return;
+
+    const originalMsg = messages[idx];
+    const newText = editingText.trim();
+
+    if (!newText) return;
+
+    // Nothing actually changed — just close the editor instead of
+    // burning a usage credit and regenerating an identical reply.
+    if (newText === originalMsg.text) {
+      cancelEditingMessage();
+      return;
+    }
+
+    // If the reply being replaced was a generated image, keep the
+    // regenerated one an image too — otherwise editing an image prompt's
+    // wording would silently downgrade it to a plain text reply.
+    const wasImageReply = !!messages[idx + 1]?.imageUrl;
+
+    setEditingMessageIdx(null);
+    await regenerateFromUserMessage(idx, newText, wasImageReply);
+  };
+
+  // 🆕 Regenerates just the image reply for a given prompt without
+  // touching the edit box — used by the "Regenerate" icon on a generated
+  // image. Reuses the exact same edit/regenerate pipeline (same endpoint,
+  // same message_id), just with the prompt text unchanged, since the
+  // point here isn't editing what was asked, only getting a fresh image
+  // for it. Unlike handleEditMessage, there's no "did the text change"
+  // guard — a regenerate is always intentional.
+  const handleRegenerateImage = async (botIdx) => {
+    if (isSendingRef.current) return;
+    const userIdx = botIdx - 1;
+    const userMsg = messages[userIdx];
+    if (!userMsg || userMsg.role !== "user") return;
+    await regenerateFromUserMessage(userIdx, userMsg.text, true);
+  };
+
+  // Shared by handleEditMessage (prompt text changed) and
+  // handleRegenerateImage (same prompt, just wants a new result) — both
+  // ultimately need to: drop the old user message + its reply (and
+  // anything after it), re-send to /edit-message, and splice in whatever
+  // comes back, whether that's text or a freshly generated image.
+  // `forceImage` mirrors the `force_mode: "image"` flag the original
+  // /chat call sends when a create-image request goes out — without it
+  // the backend has no way to know this should generate an image rather
+  // than reply conversationally about the prompt.
+  const regenerateFromUserMessage = async (idx, newText, forceImage = false) => {
+    const originalMsg = messages[idx];
+
+    if (!originalMsg.messageId || !currentChatId) {
+      // Shouldn't normally happen — every message sent or loaded now
+      // carries a messageId. If it's somehow missing, there's no safe
+      // way to know what to delete/regenerate server-side, so don't
+      // pretend this worked.
+      console.error("Cannot regenerate this message — missing messageId or chat_id.");
+      return;
+    }
+
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    isSendingRef.current = true;
+
+    // Drop the old version of this message and everything after it (its
+    // old reply, and any later exchanges) — regenerating happens from this
+    // point forward, it doesn't create a second branch alongside the old one.
+    setMessages((prev) => [
+      ...prev.slice(0, idx),
+      { role: "user", text: newText, messageId: originalMsg.messageId },
+    ]);
+    setIsBotTyping(true);
+
+    sessionCounterRef.current += 1;
+    const localSessionId = sessionCounterRef.current;
+    activeSessionIdRef.current = localSessionId;
+
+    try {
+      const token = await currentUser.getIdToken();
+
+      const limitRes = await fetch("http://127.0.0.1:8000/check-limit", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      if (!limitRes.ok) throw new Error("Failed to check daily limit.");
+      const limitData = await limitRes.json();
+      if (!limitData.allowed) {
+        setLimitModal(true);
+        return;
+      }
+
+      const usageRes = await fetch("http://127.0.0.1:8000/update-usage", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!usageRes.ok) throw new Error("Failed to update chat usage.");
+
+      const editRes = await fetch("http://127.0.0.1:8000/edit-message", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: currentChatId,
+          message_id: originalMsg.messageId,
+          message: newText,
+          force_mode: forceImage ? "image" : null,
+          mode: selectedMode,
+          // 🆕 Best-effort hint for the backend/image API: this is an
+          // explicit regenerate of the SAME prompt, so any cache/dedup
+          // keyed on identical prompt text should be bypassed and a new
+          // seed used. Harmless if the backend doesn't read these.
+          ...(forceImage ? { regenerate: true, seed: Date.now() } : {}),
+        }),
+      });
+
+      if (!editRes.ok) {
+        const errBody = await editRes.json().catch(() => ({}));
+        throw new Error(errBody.detail || "Failed to regenerate a response.");
+      }
+
+      const editData = await editRes.json();
+
+      if (!editData.success) {
+        throw new Error(editData.error || "Something went wrong regenerating a response.");
+      }
+
+      fetchChatList();
+
+      const stillOnThisChat = activeSessionIdRef.current === localSessionId;
+      if (stillOnThisChat) {
+        const fallbackImageUrl = extractGeneratedImageUrl(editData.data.response);
+        const isImage = editData.data.type === "image" || !!fallbackImageUrl;
+        setMessages((prev) => [
+          ...prev.map((m) =>
+            m.messageId === originalMsg.messageId && m.role === "user"
+              ? { ...m, messageId: editData.data.message_id }
+              : m
+          ),
+          isImage
+            ? {
+                role: "bot",
+                text: "",
+                imageUrl: editData.data.image_url || fallbackImageUrl,
+                mode: editData.data.mode,
+                messageId: editData.data.message_id,
+              }
+            : {
+                role: "bot",
+                text: editData.data.response,
+                mode: editData.data.mode,
+                messageId: editData.data.message_id,
+              },
+        ]);
+      }
+    } catch (err) {
+      console.error(err);
+      if (activeSessionIdRef.current === localSessionId) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "bot",
+            text: "Sorry, something went wrong getting a response. Please try again.",
+          },
+        ]);
+      }
+    } finally {
+      if (activeSessionIdRef.current === localSessionId) {
+        setIsBotTyping(false);
+      }
+      isSendingRef.current = false;
+    }
+  };
+
+  // 🔥 Track the previously-open chat so we can tell "switched to a
+  // different chat" (messages array replaced wholesale) apart from
+  // "a new message arrived in the chat I'm already looking at". The
+  // former should land at the bottom instantly; only the latter should
+  // animate. Without this, switching chats replayed a smooth scroll
+  // from wherever the old chat had scrolled to, all the way down.
+  const prevChatIdRef = useRef(undefined);
+
+  useEffect(() => {
+    const isChatSwitch = prevChatIdRef.current !== currentChatId;
+    prevChatIdRef.current = currentChatId;
+
+    messagesEndRef.current?.scrollIntoView({
+      behavior: isChatSwitch ? "auto" : "smooth",
+    });
+  }, [messages, isBotTyping, longWait, currentChatId]);
+
+  // After 1.5s of waiting, switch from the simple 3-dot indicator to the
   // rotating "thinking" animation so a slow response doesn't just look frozen.
   useEffect(() => {
     if (!isBotTyping) {
@@ -981,7 +1499,7 @@ export default function App() {
       setWaitMsgIdx(0);
       return;
     }
-    const escalateTimer = setTimeout(() => setLongWait(true), 4000);
+    const escalateTimer = setTimeout(() => setLongWait(true), 1500);
     return () => clearTimeout(escalateTimer);
   }, [isBotTyping]);
 
@@ -1069,6 +1587,7 @@ export default function App() {
             className={`attach-btn ${attachmentMenuOpen ? "active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
+              if (!requireAuth()) return;
               setAttachmentMenuOpen(!attachmentMenuOpen);
             }}
           >
@@ -1088,6 +1607,19 @@ export default function App() {
                   <button onClick={() => cameraInputRef.current?.click()}>
                     <Camera size={16} /> Camera
                   </button>
+                  <div className="menu-divider" />
+                  <button
+                    className={createMode === "image" ? "active" : ""}
+                    onClick={handleCreateImage}
+                  >
+                    <CreateImageIcon size={16} /> Create image
+                  </button>
+                  <button
+                    className={createMode === "video" ? "active" : ""}
+                    onClick={handleCreateVideo}
+                  >
+                    <CreateVideoIcon size={16} /> Create video
+                  </button>
                 </>
               ) : (
                 <>
@@ -1105,6 +1637,19 @@ export default function App() {
                     onClick={handleDeepSearch}
                   >
                     <Search size={16} /> Deep Research
+                  </button>
+                  <div className="menu-divider" />
+                  <button
+                    className={createMode === "image" ? "active" : ""}
+                    onClick={handleCreateImage}
+                  >
+                    <CreateImageIcon size={16} /> Create image
+                  </button>
+                  <button
+                    className={createMode === "video" ? "active" : ""}
+                    onClick={handleCreateVideo}
+                  >
+                    <CreateVideoIcon size={16} /> Create video
                   </button>
                 </>
               )}
@@ -1163,25 +1708,6 @@ export default function App() {
               <Send size={18} />
             </button>
           </div>
-
-          {!createMode && (
-            <div className="create-buttons-row">
-              <button
-                className="create-action-btn create-action-btn--image"
-                onClick={handleCreateImage}
-              >
-                <CreateImageIcon size={17} />
-                <span>Create image</span>
-              </button>
-              <button
-                className="create-action-btn create-action-btn--video"
-                onClick={handleCreateVideo}
-              >
-                <CreateVideoIcon size={17} />
-                <span>Create video</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
       <p className="input-disclaimer">
@@ -1223,55 +1749,122 @@ export default function App() {
             setIsBotTyping(false);
             setMessages([]);
             setCurrentChatId(null);
+            // New Chat doesn't change which tab is active, so this fresh
+            // chat already "belongs" to whatever mode is currently selected.
+            lastModeUsedRef.current = selectedMode === "General" ? null : selectedMode;
           }}
         >
           <Plus size={18} /> New Chat
         </button>
 
         <div className="chat-history-list">
-          <p className="history-label">Recent Chats</p>
           {chatListLoading && chatHistory.length === 0 && (
             <p className="history-empty-hint">Loading...</p>
           )}
           {!chatListLoading && chatHistory.length === 0 && (
             <p className="history-empty-hint">No conversations yet</p>
           )}
-          {chatHistory.map((chat, idx) => (
-            <div key={chat.id} className="history-item-wrapper">
-              <div
-                className={`history-item ${chat.id === currentChatId ? "active" : ""} ${chat.pending ? "pending" : ""}`}
-                onClick={() => !chat.pending && loadConversation(chat.id)}
-              >
-                {chat.icon} <span>{chat.title}</span>
-                {!chat.pending && (
-                  <button
-                    className="history-menu-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuIdx(activeMenuIdx === idx ? null : idx);
-                    }}
+
+          {/* 🔥 Pinned chats get their own section up top, same as
+              ChatGPT — only rendered when at least one chat is pinned. */}
+          {chatHistory.some((c) => c.pinned) && (
+            <>
+              <p className="history-label">Pinned</p>
+              {chatHistory
+                .filter((c) => c.pinned)
+                .map((chat) => {
+                  const idx = chatHistory.indexOf(chat);
+                  return (
+                    <div key={chat.id} className="history-item-wrapper">
+                      <div
+                        className={`history-item ${chat.id === currentChatId ? "active" : ""} ${chat.pending ? "pending" : ""}`}
+                        onClick={() => !chat.pending && loadConversation(chat.id)}
+                      >
+                        <Pin size={14} className="pin-indicator" />
+                        <span>{chat.title}</span>
+                        {!chat.pending && (
+                          <button
+                            className="history-menu-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuIdx(activeMenuIdx === idx ? null : idx);
+                            }}
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      {activeMenuIdx === idx && !chat.pending && (
+                        <div className="history-action-menu">
+                          <button onClick={(e) => handleHistoryAction(e, 'Unpin', chat.id)}>
+                            <PinOff size={14} /> Unpin
+                          </button>
+                          <button onClick={(e) => handleHistoryAction(e, 'Share', chat.id)}>
+                            <Share2 size={14} /> Share
+                          </button>
+                          <button onClick={(e) => handleHistoryAction(e, 'Rename', chat.id)}>
+                            <Pencil size={14} /> Rename
+                          </button>
+                          <div className="menu-divider" />
+                          <button className="delete-action" onClick={(e) => handleHistoryAction(e, 'Delete', chat.id)}>
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </>
+          )}
+
+          {chatHistory.some((c) => !c.pinned) && (
+            <p className="history-label">Recent Chats</p>
+          )}
+          {chatHistory
+            .filter((c) => !c.pinned)
+            .map((chat) => {
+              const idx = chatHistory.indexOf(chat);
+              return (
+                <div key={chat.id} className="history-item-wrapper">
+                  <div
+                    className={`history-item ${chat.id === currentChatId ? "active" : ""} ${chat.pending ? "pending" : ""}`}
+                    onClick={() => !chat.pending && loadConversation(chat.id)}
                   >
-                    <MoreHorizontal size={16} />
-                  </button>
-                )}
-              </div>
-              
-              {activeMenuIdx === idx && !chat.pending && (
-                <div className="history-action-menu">
-                  <button onClick={(e) => handleHistoryAction(e, 'Share', chat.id)}>
-                    <Share2 size={14} /> Share
-                  </button>
-                  <button onClick={(e) => handleHistoryAction(e, 'Rename', chat.id)}>
-                    <Pencil size={14} /> Rename
-                  </button>
-                  <div className="menu-divider" />
-                  <button className="delete-action" onClick={(e) => handleHistoryAction(e, 'Delete', chat.id)}>
-                    <Trash2 size={14} /> Delete
-                  </button>
+                    {chat.icon} <span>{chat.title}</span>
+                    {!chat.pending && (
+                      <button
+                        className="history-menu-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuIdx(activeMenuIdx === idx ? null : idx);
+                        }}
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {activeMenuIdx === idx && !chat.pending && (
+                    <div className="history-action-menu">
+                      <button onClick={(e) => handleHistoryAction(e, 'Pin', chat.id)}>
+                        <Pin size={14} /> Pin
+                      </button>
+                      <button onClick={(e) => handleHistoryAction(e, 'Share', chat.id)}>
+                        <Share2 size={14} /> Share
+                      </button>
+                      <button onClick={(e) => handleHistoryAction(e, 'Rename', chat.id)}>
+                        <Pencil size={14} /> Rename
+                      </button>
+                      <div className="menu-divider" />
+                      <button className="delete-action" onClick={(e) => handleHistoryAction(e, 'Delete', chat.id)}>
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              );
+            })}
         </div>
 
         <div className="sidebar-footer">
@@ -1354,14 +1947,57 @@ export default function App() {
           {initialModes.map((m) => (
             <div
               key={m.name}
-              className={`mode-tab ${selectedMode === m.name ? "active" : ""}`}
+              className={`mode-tab ${selectedMode === m.name ? "active" : ""} ${!user && m.name !== "General" ? "locked" : ""} ${isBotTyping ? "disabled" : ""}`}
+              title={
+                isBotTyping
+                  ? "Wait for the response to finish before switching modes"
+                  : (!user && m.name !== "General" ? "Sign in to use this mode" : undefined)
+              }
               onClick={() => {
+                // 🆕 Mode is locked while a response is streaming in — switching
+                // mid-generation would leave the reply orphaned/mismatched.
+                if (isBotTyping) return;
+
+                if (!user && m.name !== "General") {
+                  setShowAuthModal(true);
+                  return;
+                }
+
+                if (m.name === selectedMode) return;
+
+                // 🆕 Hopping between two DIFFERENT non-General modes always
+                // starts a fresh chat. Crucially, this checks the last
+                // non-General mode actually used in this chat — not just the
+                // tab you're on right now — so General doesn't act as an
+                // "escape hatch": Study -> General -> Emotion still counts
+                // as Study -> Emotion and resets, since Study was already
+                // used in this chat. Only General <-> the SAME mode you were
+                // already in (or a brand-new chat that hasn't used any mode
+                // yet) skips the reset.
+                if (m.name === "General") {
+                  setSelectedMode(m.name);
+                  setIsTemporaryChat(false);
+                  return;
+                }
+
+                const isCrossModeSwitch =
+                  lastModeUsedRef.current !== null && lastModeUsedRef.current !== m.name;
+                if (isCrossModeSwitch) {
+                  sessionCounterRef.current += 1;
+                  activeSessionIdRef.current = sessionCounterRef.current;
+                  setIsBotTyping(false);
+                  setMessages([]);
+                  setCurrentChatId(null);
+                }
+
+                lastModeUsedRef.current = m.name;
                 setSelectedMode(m.name);
                 if (m.name !== "Emotion") setIsTemporaryChat(false);
               }}
             >
               <span className="mode-tab-icon">{m.icon}</span>
               <span>{m.name}</span>
+              {!user && m.name !== "General" && <Lock size={12} className="mode-tab-lock" />}
             </div>
           ))}
         </div>
@@ -1370,11 +2006,15 @@ export default function App() {
           {selectedMode === "Emotion" && (
             <button 
               className={`temp-chat-toggle ${isTemporaryChat ? 'active' : ''}`}
-              onClick={() => setIsTemporaryChat(!isTemporaryChat)}
-              data-tooltip={isTemporaryChat ? "Temporary mode (Not saved)" : "Storage enabled (Saved)"}
+              onClick={() => {
+                const turningOn = !isTemporaryChat;
+                setIsTemporaryChat(turningOn);
+                if (turningOn) setShowIncognitoNotice(true);
+              }}
+              data-tooltip={isTemporaryChat ? "Incognito mode (Not saved)" : "Turn on incognito mode"}
             >
               <div className="layered-icon-container">
-                <MessageSquare size={22} />
+                <VenetianMask size={22} />
                 {isTemporaryChat && <div className="icon-tick-overlay"><Check size={12} strokeWidth={3} /></div>}
               </div>
             </button>
@@ -1443,51 +2083,125 @@ export default function App() {
                       )}
                       {msg.imageUrl && (
                         <div className="message-attachments">
-                          <div className="message-attachment-item">
-                            <img
+                          <div className="message-attachment-item generated-image-item">
+                            <GeneratedImage
                               src={msg.imageUrl}
                               alt="Generated"
                               className="message-attachment-img"
-                              onClick={() => window.open(msg.imageUrl, '_blank')}
+                              onClick={(resolvedSrc) => window.open(resolvedSrc, '_blank')}
                             />
+                            <button
+                              className="regenerate-image-btn"
+                              title="Regenerate image"
+                              disabled={isBotTyping}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRegenerateImage(idx);
+                              }}
+                            >
+                              <RefreshCw size={15} />
+                            </button>
                           </div>
                         </div>
                       )}
                       {msg.text && (
-                        <div className="message-text">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                          >
-                            {msg.text}
-                          </ReactMarkdown>
+                        editingMessageIdx === idx ? (
+                          <div className="message-edit-box">
+                            <textarea
+                              className="message-edit-textarea"
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleEditMessage(idx);
+                                } else if (e.key === "Escape") {
+                                  cancelEditingMessage();
+                                }
+                              }}
+                              autoFocus
+                              rows={1}
+                            />
+                            <div className="message-edit-actions">
+                              <button
+                                className="message-edit-cancel-btn"
+                                onClick={cancelEditingMessage}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                className="message-edit-save-btn"
+                                onClick={() => handleEditMessage(idx)}
+                              >
+                                Save & Submit
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="message-text">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={{
+                                code: (codeProps) => <CodeBlock {...codeProps} theme={theme} />,
+                                table: (tableProps) => (
+                                  <div className="message-table-wrapper">
+                                    <table {...tableProps} />
+                                  </div>
+                                ),
+                              }}
+                            >
+                              {msg.text}
+                            </ReactMarkdown>
+                          </div>
+                        )
+                      )}
+                      {/* 🆕 Small mode tag so the user always knows which
+                          mode answered them — especially useful since
+                          switching tabs mid-conversation is allowed, and
+                          because some modes (overthinking/medical) are
+                          auto-detected rather than chosen. */}
+                      {msg.role === "bot" && msg.mode && MODE_DISPLAY_LABELS[msg.mode] && (
+                        <div className="message-mode-tag">
+                          {MODE_DISPLAY_LABELS[msg.mode]}
                         </div>
                       )}
-                      <div className="message-actions">
-                        <button
-                          className="action-btn"
-                          title="Copy"
-                          onClick={() => handleCopy(msg.text, idx)}
-                        >
-                          {copiedIndex === idx ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
-                        </button>
-                        {msg.role === "bot" && (
-                          <>
+                      {editingMessageIdx !== idx && (
+                        <div className="message-actions">
+                          <button
+                            className="action-btn"
+                            title="Copy"
+                            onClick={() => handleCopy(msg.text, idx)}
+                          >
+                            {copiedIndex === idx ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
+                          </button>
+                          {msg.role === "bot" && (
+                            <>
+                              <button
+                                className={`action-btn ${msg.feedback === 'up' ? 'active' : ''}`}
+                                onClick={() => handleFeedback(idx, 'up')}
+                              >
+                                <ThumbsUp size={16} />
+                              </button>
+                              <button
+                                className={`action-btn ${msg.feedback === 'down' ? 'active' : ''}`}
+                                onClick={() => handleFeedback(idx, 'down')}
+                              >
+                                <ThumbsDown size={16} />
+                              </button>
+                            </>
+                          )}
+                          {msg.role === "user" && (
                             <button
-                              className={`action-btn ${msg.feedback === 'up' ? 'active' : ''}`}
-                              onClick={() => handleFeedback(idx, 'up')}
+                              className="action-btn"
+                              title="Edit"
+                              onClick={() => startEditingMessage(idx)}
                             >
-                              <ThumbsUp size={16} />
+                              <Pencil size={16} />
                             </button>
-                            <button
-                              className={`action-btn ${msg.feedback === 'down' ? 'active' : ''}`}
-                              onClick={() => handleFeedback(idx, 'down')}
-                            >
-                              <ThumbsDown size={16} />
-                            </button>
-                          </>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1572,6 +2286,27 @@ export default function App() {
                 }}
               >
                 Upgrade
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INCOGNITO MODE ENABLED NOTICE MODAL */}
+      {showIncognitoNotice && (
+        <div className="auth-modal-overlay" onClick={() => setShowIncognitoNotice(false)}>
+          <div className="auth-modal incognito-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="auth-modal-close" onClick={() => setShowIncognitoNotice(false)}>
+              <X size={20} />
+            </button>
+            <div className="auth-modal-icon incognito-modal-icon">
+              <VenetianMask size={30} />
+            </div>
+            <h3>Incognito mode is on</h3>
+            <p>This chat won't be saved to your history. Once you leave or start a new conversation, these messages are gone for good.</p>
+            <div className="auth-modal-buttons">
+              <button className="auth-modal-btn signup incognito-full-btn" onClick={() => setShowIncognitoNotice(false)}>
+                Got it
               </button>
             </div>
           </div>

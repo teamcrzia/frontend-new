@@ -196,23 +196,26 @@
   cursor: pointer;
   font-size: 0.9rem;
   transition: 0.2s;
-  white-space: nowrap;
+}
+/* The icon must never shrink — without this, a long title (which has
+   nowhere else to go since the row can't grow) squeezes the icon down
+   until it visually disappears, while shorter-titled chats keep theirs. */
+.history-item svg {
+  flex-shrink: 0;
+}
+/* Truncation belongs on the title text itself, not the flex row — that's
+   what actually lets the icon stay full-size while the text ellipsizes. */
+.history-item span {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
-.chat-app.dark .history-item:hover { background: rgba(255,255,255,0.05); }
-.chat-app.light .history-item:hover { background: rgba(0,0,0,0.05); }
 
-.history-item.active {
-  font-weight: 600;
-}
-.chat-app.dark .history-item.active { background: rgba(59, 130, 246, 0.12); }
-.chat-app.light .history-item.active { background: rgba(59, 130, 246, 0.08); }
-
-.history-empty-hint {
-  padding: 10px 12px;
-  font-size: 0.82rem;
-  opacity: 0.6;
+/* Pinned-row icon — accent color instead of the plain message icon,
+   so pinned chats read as visually distinct at a glance. */
+.history-item .pin-indicator {
+  color: var(--accent-color, #3b82f6);
 }
 
 .sidebar-footer {
@@ -469,6 +472,27 @@
   display: flex;
   align-items: center;
 }
+.mode-tab.locked {
+  opacity: 0.55;
+}
+.mode-tab.locked:hover {
+  opacity: 0.8;
+}
+.mode-tab.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mode-tab.disabled:hover {
+  box-shadow: none;
+  background: var(--input-bg-dark);
+}
+.chat-app.light .mode-tab.disabled:hover {
+  background: var(--input-bg-light);
+}
+.mode-tab-lock {
+  margin-left: -2px;
+  opacity: 0.8;
+}
 .mode-tab-icon svg {
   width: 16px;
   height: 16px;
@@ -652,85 +676,7 @@
   flex-direction: column;
   gap: 12px;
   padding-top: 6px;
-}
-
-/* --- Typing indicator (shown while waiting for the AI's response) --- */
-.typing-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 10px 14px;
-  width: fit-content;
-}
-
-.typing-indicator span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-secondary-dark, #94a3b8);
-  opacity: 0.6;
-  animation: typingBounce 1.2s infinite ease-in-out;
-}
-
-.chat-app.light .typing-indicator span {
-  background: var(--text-secondary-light, #64748b);
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: 0s; }
-.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
-
-@keyframes typingBounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-  30% {
-    transform: translateY(-5px);
-    opacity: 1;
-  }
-}
-
-.long-wait-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  width: fit-content;
-}
-
-.long-wait-orbit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-color);
-  animation: longWaitSpin 1.8s linear infinite;
-}
-
-@keyframes longWaitSpin {
-  to { transform: rotate(360deg); }
-}
-
-.long-wait-text {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--text-secondary-dark, #94a3b8);
-  animation: longWaitFadeIn 0.4s ease;
-}
-
-.chat-app.light .long-wait-text {
-  color: var(--text-secondary-light, #64748b);
-}
-
-@keyframes longWaitFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  min-width: 0;
 }
 
 .message-text {
@@ -741,6 +687,7 @@
   max-width: 85%;
   word-break: break-word;
   text-align: left;
+  min-width: 0;
 }
 
 .message-wrapper.user {
@@ -767,6 +714,373 @@
 .chat-app.light .message-wrapper.bot .message-text {
   background: var(--input-bg-light);
   border-color: var(--border-light);
+}
+
+/* 🆕 EDIT MESSAGE — replaces .message-text while editing a user message */
+.message-edit-box {
+  width: 100%;
+  max-width: 85%;
+  margin-left: auto;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 18px 4px 18px 18px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+.message-edit-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: inherit;
+  min-height: 24px;
+}
+
+.message-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.message-edit-cancel-btn,
+.message-edit-save-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.message-edit-cancel-btn {
+  background: transparent;
+  color: var(--text-dark-muted);
+  border: 1px solid var(--border-dark);
+}
+.chat-app.light .message-edit-cancel-btn {
+  color: var(--text-light-muted);
+  border-color: var(--border-light);
+}
+.message-edit-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.chat-app.light .message-edit-cancel-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.message-edit-save-btn {
+  background: var(--accent-color);
+  color: #fff;
+}
+.message-edit-save-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* 🆕 Small pill under a bot reply showing which mode answered it */
+.message-mode-tag {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent-color);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  align-self: flex-start;
+}
+
+/* -------------------------------------------------
+   THINKING / TYPING INDICATOR
+   Previously had zero CSS at all — the JSX rendered
+   the divs/spans but nothing styled or animated them,
+   so it just looked like a plain empty block.
+   ------------------------------------------------- */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 16px;
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 18px 18px 18px 4px;
+}
+.chat-app.light .typing-indicator {
+  background: rgba(15, 23, 42, 0.04);
+}
+.typing-indicator span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  opacity: 0.6;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+.typing-indicator span:nth-child(1) { animation-delay: 0s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.long-wait-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 18px 18px 18px 4px;
+  color: var(--text-dark-muted);
+  font-size: 0.9rem;
+}
+.chat-app.light .long-wait-indicator {
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--text-light-muted);
+}
+
+.long-wait-orbit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-color);
+  animation: longWaitSpin 1.6s linear infinite;
+}
+
+@keyframes longWaitSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.long-wait-text {
+  animation: longWaitFade 0.4s ease;
+}
+
+@keyframes longWaitFade {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ─── CODE BLOCKS (fenced ```code``` rendered by ReactMarkdown) ─── */
+.code-block-wrapper {
+  margin: 14px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-dark);
+  background: var(--input-bg-dark);
+  max-width: 100%;
+}
+
+.chat-app.light .code-block-wrapper {
+  border-color: var(--border-light);
+  background: var(--input-bg-light);
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--bg-color-dark);
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.chat-app.light .code-block-header {
+  background: var(--border-light);
+  border-bottom-color: var(--border-light);
+}
+
+.code-block-lang {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dark-muted);
+  text-transform: lowercase;
+  font-family: 'Courier New', monospace;
+}
+
+.chat-app.light .code-block-lang {
+  color: var(--text-light-muted);
+}
+
+.code-block-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-dark-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.chat-app.light .code-block-copy-btn {
+  color: var(--text-light-muted);
+}
+
+.code-block-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dark);
+}
+
+.chat-app.light .code-block-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-light);
+}
+
+/* Inline code (single backticks) — a small pill, not a full block */
+.inline-code {
+  background: var(--input-bg-dark);
+  border: 1px solid var(--border-dark);
+  color: #f472b6;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.88em;
+  font-family: 'Courier New', monospace;
+}
+
+.chat-app.light .inline-code {
+  background: var(--input-bg-light);
+  border-color: var(--border-light);
+  color: #be185d;
+}
+
+/* ─── BASIC MARKDOWN ELEMENTS (rendered by ReactMarkdown) ───
+   Paragraphs, lists, emphasis — these had no styling at all before,
+   so ReactMarkdown's real <p>/<ul>/<strong> tags fell back to bare
+   browser defaults instead of matching the chat's look. */
+.message-text p {
+  margin: 0 0 10px 0;
+}
+.message-text p:last-child {
+  margin-bottom: 0;
+}
+.message-text strong {
+  font-weight: 700;
+}
+.message-text em {
+  font-style: italic;
+}
+.message-text ul,
+.message-text ol {
+  margin: 4px 0 12px 0;
+  padding-left: 22px;
+}
+.message-text li {
+  margin-bottom: 4px;
+}
+.message-text li:last-child {
+  margin-bottom: 0;
+}
+.message-text a {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+.message-text blockquote {
+  margin: 10px 0;
+  padding: 4px 14px;
+  border-left: 3px solid var(--accent-color);
+  color: var(--text-dark-muted);
+}
+.chat-app.light .message-text blockquote {
+  color: var(--text-light-muted);
+}
+
+/* ─── TABLES (GFM tables via remark-gfm) ───
+   Previously zero CSS existed for table/th/td at all, so a markdown
+   table rendered as a bare, unstyled, unbordered browser default —
+   which also has no wrap/scroll handling, so a wide table could push
+   past the message bubble's edge instead of scrolling within it. */
+.message-table-wrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border-dark);
+}
+.chat-app.light .message-table-wrapper {
+  border-color: var(--border-light);
+}
+
+.message-text table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;
+  font-size: 0.92rem;
+}
+
+.message-text th,
+.message-text td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-dark);
+  white-space: normal;
+}
+.chat-app.light .message-text th,
+.chat-app.light .message-text td {
+  border-bottom-color: var(--border-light);
+}
+
+.message-text thead th {
+  background: var(--input-bg-dark);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.chat-app.light .message-text thead th {
+  background: var(--input-bg-light);
+}
+
+.message-text tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.message-text tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.chat-app.light .message-text tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+/* 🆕 MODE TAG — small pill under a bot reply showing which mode
+   (Study/Code/Career/Emotion/etc.) actually answered. Useful since
+   switching mode tabs mid-conversation is allowed, and because some
+   modes (overthinking/medical) are auto-detected rather than chosen,
+   so the user has no other way of knowing which one fired. */
+.message-mode-tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  color: var(--accent-color);
+}
+.chat-app.light .message-mode-tag {
+  background: rgba(59, 130, 246, 0.07);
+  border-color: rgba(59, 130, 246, 0.18);
 }
 
 
@@ -960,12 +1274,6 @@
   transform: scale(1.1);
 }
 
-.send-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
 .input-disclaimer {
   font-size: 0.75rem;
   margin-top: 12px;
@@ -975,90 +1283,13 @@
 .chat-app.dark .input-disclaimer { color: var(--text-dark-muted); }
 .chat-app.light .input-disclaimer { color: var(--text-light-muted); }
 
-/* ─── CREATE BUTTONS ROW (now nested inside .input-wrapper) ─── */
-.create-buttons-row {
-  display: flex;
-  gap: 10px;
-  flex: 0 0 100%;
-  width: 100%;
-  margin-top: 4px;
-  padding: 10px 16px 14px 16px;
-  flex-wrap: wrap;
-  box-sizing: border-box;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.chat-app.light .create-buttons-row {
-  border-top-color: rgba(0, 0, 0, 0.06);
-}
-
-.create-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1.5px solid;
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 600;
-  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  background: transparent;
-  font-family: inherit;
-  letter-spacing: 0.01em;
-}
-
-/* Image button */
-.create-action-btn--image {
-  border-color: rgba(59, 130, 246, 0.45);
-  color: #60a5fa;
-}
-.chat-app.light .create-action-btn--image {
-  border-color: rgba(59, 130, 246, 0.35);
-  color: #2563eb;
-}
-.create-action-btn--image:hover,
-.create-action-btn--image.active {
-  background: rgba(59, 130, 246, 0.12);
-  border-color: var(--accent-color);
-  color: #93c5fd;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.2);
-}
-.chat-app.light .create-action-btn--image:hover,
-.chat-app.light .create-action-btn--image.active {
-  background: rgba(59, 130, 246, 0.08);
-  color: #1d4ed8;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.12);
-}
-
-/* Video button */
-.create-action-btn--video {
-  border-color: rgba(168, 85, 247, 0.45);
-  color: #c084fc;
-}
-.chat-app.light .create-action-btn--video {
-  border-color: rgba(126, 34, 206, 0.35);
-  color: #7c3aed;
-}
-.create-action-btn--video:hover {
-  background: rgba(168, 85, 247, 0.12);
-  border-color: #a855f7;
-  color: #e9d5ff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.2);
-}
-.chat-app.light .create-action-btn--video:hover {
-  background: rgba(126, 34, 206, 0.08);
-  color: #6d28d9;
-  box-shadow: 0 4px 14px rgba(126, 34, 206, 0.12);
-}
-
-.create-btn-icon {
-  font-size: 1rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
+/* ─── "Create image" / "Create video" — moved into the "+" attachment
+   menu (see .attachment-menu below) so they no longer sit as an
+   always-visible row under the input, permanently eating vertical
+   space even when the user isn't using either feature. The old
+   .create-buttons-row / .create-action-btn rules that positioned that
+   row are gone; the menu items reuse the existing generic
+   .attachment-menu button styling instead. ─── */
 
 /* ─── CREATE MODE TAG (inside input box) ─── */
 .create-mode-tag {
@@ -1160,9 +1391,9 @@
   background: rgba(0,0,0,0.1);
 }
 
-/* Input wrapper always allows wrapping so the create-buttons-row
-   (and, in create mode, the create-mode-tag) can drop to their own
-   line while attach-btn/textarea/send-btn stay on the first row. */
+/* Input wrapper always allows wrapping so the create-mode-tag (shown
+   while Create Image/Video mode is active) can drop to its own line
+   while attach-btn/textarea/send-btn stay on the first row. */
 .input-wrapper {
   flex-wrap: wrap;
 }
@@ -1319,6 +1550,22 @@
 }
 .chat-app.light .auth-modal-btn.signup:hover {
   background: rgba(59, 130, 246, 0.06);
+}
+
+/* --- INCOGNITO MODE NOTICE MODAL --- */
+.incognito-modal-icon {
+  background: linear-gradient(135deg, #334155, #0f172a);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-app.light .incognito-modal-icon {
+  background: linear-gradient(135deg, #475569, #1e293b);
+}
+
+.incognito-full-btn {
+  flex: 1;
+  width: 100%;
 }
 
 /* --- TOP ACTIONS (TEMPORARY CHAT TOGGLE etc.) --- */
@@ -1753,26 +2000,6 @@
     height: 14px;
   }
 
-  /* Create Buttons Row on Mobile */
-  .create-buttons-row {
-    justify-content: center;
-    gap: 8px;
-    margin-top: 6px;
-  }
-
-  .create-action-btn {
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    border-radius: 16px;
-    gap: 5px;
-    border-width: 1px;
-  }
-
-  .create-action-btn svg {
-    width: 14px;
-    height: 14px;
-  }
-
   /* Disclaimer on mobile */
   .input-disclaimer {
     font-size: 0.7rem;
@@ -2168,6 +2395,70 @@
   border-color: var(--accent-color);
 }
 
+/* --- GENERATED IMAGE + REGENERATE BUTTON --- */
+.generated-image-item {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+}
+
+.generated-image-error {
+  width: 280px;
+  max-width: 100%;
+  padding: 24px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.regenerate-image-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 0.2s ease;
+}
+
+.generated-image-item:hover .regenerate-image-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.regenerate-image-btn:hover {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.regenerate-image-btn:active svg {
+  animation: regenerateSpin 0.5s ease;
+}
+
+.regenerate-image-btn:disabled {
+  opacity: 0 !important;
+  cursor: not-allowed;
+}
+
+@keyframes regenerateSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(180deg); }
+}
+
 
 
 /* --- USER MENU OVERRIDE (must stay after .history-action-menu above,
@@ -2179,96 +2470,4 @@
   bottom: calc(100% + 8px);
   right: 0;
   width: 180px;
-}
-/* --- PENDING (OPTIMISTIC) SIDEBAR CHAT ENTRY --- */
-/* Shown the instant a brand-new chat's first message is sent, before
-   the backend confirms the real chat_id — replaced automatically by
-   fetchChatList() once the response lands. */
-.history-item.pending {
-  cursor: default;
-  opacity: 0.6;
-  animation: pendingPulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pendingPulse {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.75; }
-}
-
-/* --- RENAME MODAL --- */
-.rename-modal-input {
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f8fafc;
-  font-size: 0.95rem;
-  outline: none;
-  box-sizing: border-box;
-  margin-bottom: 24px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.rename-modal-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-.chat-app.light .rename-modal-input {
-  background: #f8fafc;
-  border-color: #d1d5db;
-  color: #111827;
-}
-
-.chat-app.light .rename-modal-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-}
-
-/* --- SHARE MODAL --- */
-.share-modal-link-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.share-modal-link-input {
-  flex: 1;
-  padding: 11px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: #cbd5e1;
-  font-size: 0.82rem;
-  outline: none;
-  min-width: 0;
-}
-
-.chat-app.light .share-modal-link-input {
-  background: #f8fafc;
-  border-color: #d1d5db;
-  color: #475569;
-}
-
-.share-modal-copy-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 11px 16px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(135deg, var(--accent-color), #60a5fa);
-  color: white;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
-}
-
-.share-modal-copy-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }

@@ -1,15 +1,50 @@
-/* Order Summary Page - Override auth-page constraints */
+/* Order Summary Page - Override auth-page constraints
+   ------------------------------------------------------------------
+   Theme variables are scoped to .order-summary-wrapper and keyed off
+   html[data-theme="..."] — the same attribute App.jsx already sets on
+   <html> for the chat page. Values are matched to ChatWithAi.css's
+   dark palette (--bg-color-dark, --accent-color, etc.) so this page
+   feels consistent with the rest of the app instead of introducing a
+   second, unrelated color scheme.
+*/
 .order-summary-wrapper {
+  --os-bg: #ffffff;
+  --os-bg-alt: #f0f5ff;
+  --os-panel: #ffffff;
+  --os-text: #0f172a;
+  --os-text-muted: #333333;
+  --os-border: #e5e5e5;
+  --os-border-soft: #f0f0f0;
+  --os-accent: #0055cc;
+  --os-accent-hover: #003d99;
+  --os-accent-soft: #f0f5ff;
+  --os-check: #3b82f6;
+
   height: auto !important;
   min-height: 100vh !important;
   width: 100% !important;
   display: block !important;
   padding: 0 !important;
-  background: #ffffff !important;
+  background: var(--os-bg) !important;
   overflow: visible !important;
   justify-content: unset !important;
   align-items: unset !important;
   position: relative !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html[data-theme="dark"] .order-summary-wrapper {
+  --os-bg: #0f172a;
+  --os-bg-alt: rgba(59, 130, 246, 0.1);
+  --os-panel: #1e293b;
+  --os-text: #f8fafc;
+  --os-text-muted: #94a3b8;
+  --os-border: #1e293b;
+  --os-border-soft: rgba(255, 255, 255, 0.06);
+  --os-accent: #3b82f6;
+  --os-accent-hover: #2563eb;
+  --os-accent-soft: rgba(59, 130, 246, 0.12);
+  --os-check: #60a5fa;
 }
 
 /* Order Summary Page */
@@ -18,7 +53,7 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 40px 20px 60px 20px;
-  background: #ffffff;
+  background: var(--os-bg);
   display: block;
 }
 
@@ -35,7 +70,7 @@
 .order-title {
   font-size: 2.2rem;
   font-weight: 700;
-  color: #000000;
+  color: var(--os-text);
   margin: 0;
   text-align: center;
   flex: 1;
@@ -43,22 +78,22 @@
 }
 
 .back-btn {
-  background: linear-gradient(135deg, #ffffff, #f0f5ff);
-  border: 2px solid #0055cc;
+  background: linear-gradient(135deg, var(--os-panel), var(--os-bg-alt));
+  border: 2px solid var(--os-accent);
   padding: 12px 24px;
   border-radius: 10px;
   font-size: 1rem;
   font-weight: 700;
-  color: #0055cc;
+  color: var(--os-accent);
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 85, 204, 0.1);
 }
 
 .back-btn:hover {
-  background: linear-gradient(135deg, #f0f5ff, #ffffff);
-  border-color: #003d99;
-  color: #003d99;
+  background: linear-gradient(135deg, var(--os-bg-alt), var(--os-panel));
+  border-color: var(--os-accent-hover);
+  color: var(--os-accent-hover);
   transform: translateX(-4px);
   box-shadow: 0 6px 20px rgba(0, 85, 204, 0.2);
 }
@@ -76,31 +111,31 @@
 
 /* Sections */
 .order-section {
-  background: #ffffff;
-  border: 2px solid #e5e5e5;
+  background: var(--os-panel);
+  border: 2px solid var(--os-border);
   border-radius: 15px;
   padding: 30px;
   transition: all 0.3s ease;
 }
 
 .order-section:hover {
-  border-color: #0055cc;
+  border-color: var(--os-accent);
   box-shadow: 0 4px 15px rgba(0, 85, 204, 0.1);
 }
 
 .section-title {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #000000;
+  color: var(--os-text);
   margin: 0 0 20px 0;
   padding-bottom: 15px;
-  border-bottom: 2px solid #0055cc;
+  border-bottom: 2px solid var(--os-accent);
 }
 
 /* Plan Card Summary */
 .plan-card-summary {
-  background: #f0f5ff;
-  border: 2px solid #0055cc;
+  background: var(--os-bg-alt);
+  border: 2px solid var(--os-accent);
   border-radius: 12px;
   padding: 25px;
   margin-top: 15px;
@@ -116,45 +151,50 @@
 .coupon-input {
   flex: 1;
   padding: 12px 16px;
-  border: 2px solid #e5e5e5;
+  border: 2px solid var(--os-border);
   border-radius: 10px;
   font-size: 0.95rem;
   outline: none;
   transition: all 0.3s ease;
-  background: #ffffff;
+  background: var(--os-panel);
+  color: var(--os-text);
+}
+
+.coupon-input::placeholder {
+  color: var(--os-text-muted);
 }
 
 .coupon-input:focus {
-  border-color: #0055cc;
+  border-color: var(--os-accent);
   box-shadow: 0 0 0 4px rgba(0, 85, 204, 0.1);
 }
 
 .apply-btn {
   padding: 12px 24px;
-  background: #f0f5ff;
-  border: 2px solid #0055cc;
+  background: var(--os-bg-alt);
+  border: 2px solid var(--os-accent);
   border-radius: 10px;
-  color: #0055cc;
+  color: var(--os-accent);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .apply-btn:hover {
-  background: #0055cc;
+  background: var(--os-accent);
   color: #ffffff;
 }
 
 .plan-name-summary {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #000000;
+  color: var(--os-text);
   margin: 0 0 10px 0;
 }
 
 .plan-desc-summary {
   font-size: 1rem;
-  color: #000000;
+  color: var(--os-text);
   margin: 0 0 20px 0;
   line-height: 1.5;
 }
@@ -169,19 +209,19 @@
 .price-summary {
   font-size: 2.5rem;
   font-weight: 800;
-  color: #000000;
+  color: var(--os-text);
 }
 
 .duration-summary {
   font-size: 0.9rem;
-  color: #000000;
+  color: var(--os-text);
 }
 
 /* Features Summary */
 .features-summary h4 {
   font-size: 1rem;
   font-weight: 700;
-  color: #000000;
+  color: var(--os-text);
   margin: 0 0 15px 0;
 }
 
@@ -199,11 +239,11 @@
   align-items: center;
   gap: 12px;
   font-size: 0.95rem;
-  color: #333333;
+  color: var(--os-text-muted);
 }
 
 .feature-check {
-  color: #3b82f6;
+  color: var(--os-check);
   font-weight: 700;
   font-size: 1.2rem;
 }
@@ -220,38 +260,38 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--os-border-soft);
 }
 
 .summary-row.summary-divider {
-  border-bottom: 2px solid #3b82f6;
+  border-bottom: 2px solid var(--os-check);
   margin-bottom: 10px;
   padding-top: 20px;
 }
 
 .summary-row.summary-total {
-  background: #f0f5ff;
+  background: var(--os-bg-alt);
   padding: 20px;
   border-radius: 10px;
-  border: 2px solid #0055cc;
+  border: 2px solid var(--os-accent);
   font-weight: 700;
   font-size: 1.1rem;
 }
 
 .summary-label {
   font-size: 0.95rem;
-  color: #000000;
+  color: var(--os-text);
   font-weight: 600;
 }
 
 .summary-value {
   font-size: 1rem;
-  color: #000000;
+  color: var(--os-text);
   font-weight: 600;
 }
 
 .summary-row.summary-total .summary-value {
-  color: #000000;
+  color: var(--os-text);
   font-size: 1.3rem;
 }
 
@@ -269,7 +309,7 @@
 .proceed-btn {
   width: 100%;
   padding: 18px 30px;
-  background: linear-gradient(135deg, #0055cc, #003d99);
+  background: linear-gradient(135deg, var(--os-accent), var(--os-accent-hover));
   color: #ffffff;
   border: none;
   border-radius: 10px;
@@ -289,14 +329,21 @@
   transform: translateY(-1px);
 }
 
+.proceed-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Payment Info */
 .payment-info {
   text-align: center;
   font-size: 0.85rem;
-  color: #000000;
+  color: var(--os-text-muted);
   margin: 0;
   padding-top: 10px;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--os-border);
 }
 
 /* Responsive */
